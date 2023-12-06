@@ -1,0 +1,7 @@
+set(tobe3_gait_SETUP_PY_SETUP_MODULE "distutils.core")
+set(tobe3_gait_SETUP_PY_VERSION "0.1.0")
+set(tobe3_gait_SETUP_PY_SCRIPTS "")
+set(tobe3_gait_SETUP_PY_PACKAGES "tobe3_gait")
+set(tobe3_gait_SETUP_PY_PACKAGE_DIRS "src/tobe3_gait")
+set(tobe3_gait_SETUP_PY_MODULES "")
+set(tobe3_gait_SETUP_PY_MODULE_DIRS "")

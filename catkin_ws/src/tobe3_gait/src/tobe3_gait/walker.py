@@ -11,32 +11,39 @@ from tobe3_real.tobe import Tobe
 
 class WalkFunc:
     """
-    Walk Joint Function CPG style
-    Provides parameters for walking, given swing amplitude A, motion phase mu
+    Walk Joint Function CPG style.
+    Modified version of CPG gait in chapter 6 of Missura's PhD thesis "Analytic and Learned Footstep 
+    Control for Robust Bipedal Walking".
+    Modifications are outlined in chapter 3 of Sweafford's PhD thesis "Model-Free Control Methods for Gait
+    and Push Recovery in Bipedal Humanoid Robots".
+    Provides parameters for walking, given swing amplitude A, motion phase mu.
     """
 
     def __init__(self):
+        # K-values
         K1 = 0.35  # home position leg extension
-        K2 = -0.15  # -0.1 home position leg roll angle
-        K3 = -0.45  # -0.2 home position leg pitch angle
+        K2 = -0.15  # -0.1 # home position leg roll angle
+        K3 = -0.45  # -0.2 # home position leg pitch angle
         K4 = 0.05  # home position foot roll angle
         K5 = -0.12  # home position foot pitch angle
-        self.eta_R = K1
-        self.eta_L = K1
-        self.phi_Rleg = np.array([K2, K3, 0])
-        self.phi_Lleg = np.array([-K2, K3, 0])
-        self.phi_Rfoot = np.array([K4, K5])
-        self.phi_Lfoot = np.array([K4, K5])
-        self.A = np.array([0, 0, 0])
-        self.phase = -math.pi
-        self.At1 = 0
+        
+        # initialize parameters
+        self.eta_R = K1 # right leg extension parameter
+        self.eta_L = K1 # left leg extension parameter
+        self.phi_Rleg = np.array([K2, K3, 0]) # right leg angle vector (with respect to vertical line)
+        self.phi_Lleg = np.array([-K2, K3, 0]) # left leg angle vector (w.r.t. vertical line)
+        self.phi_Rfoot = np.array([K4, K5]) # right foot angle vector (w.r.t. horizontal)
+        self.phi_Lfoot = np.array([K4, K5]) # left foot angle vector (w.r.t. horizontal)
+        self.A = np.array([0, 0, 0]) # initialize swing amplitude activation vector to zero (roll, pitch, yaw)
+        self.phase = -math.pi # phase begins at -pi, progresses monotonically to pi, then cycles back to -pi
+        self.At1 = 0 # initialize target swing amplitude to zero
 
     def eta_leg_lift(self, A, phase, K_mu0, K_mu1, K_mu2):
-        mu = phase
+        mu = phase  # mu is the phase variable
         K6 = 0.04   # ground push constant
         K7 = 0      # ground push intensifier
-        K8 = 0.06   # 0.06 step height constant
-        K9 = 0.03   # 0.03 step height intensifier
+        K8 = 0.06   # step height constant
+        K9 = 0.03   # step height intensifier
         if ((mu > K_mu0) and (mu < K_mu1)):  # during right swing phase
             if mu < K_mu2:  # during leg lifting
                 eta_R = math.sin(0.5*math.pi*(mu-K_mu0) /
@@ -45,9 +52,9 @@ class WalkFunc:
                 eta_R = math.sin(
                     0.5*math.pi*(1+(mu-K_mu2)/(K_mu1-K_mu2)))*(K8+K9*max(abs(A)))
         else:  # during right stance phase
-            if mu >= K_mu1:
+            if mu >= K_mu1: # and phase < pi
                 nu_R1 = -math.pi+math.pi*(mu-K_mu1)/(2*math.pi+K_mu0-K_mu1)
-            else:
+            else: # where phase >= -pi
                 nu_R1 = -math.pi+math.pi * \
                     (mu-K_mu1+2*math.pi)/(2*math.pi+K_mu0-K_mu1)
             eta_R = math.sin(0.5*nu_R1)*(K6+K7*max(abs(A)))
@@ -58,7 +65,7 @@ class WalkFunc:
             else:  # during leg lowering
                 eta_L = math.sin(
                     0.5*math.pi*(1+(mu-K_mu2+math.pi)/(K_mu1-K_mu2)))*(K8+K9*max(abs(A)))
-        else:  # during right stance phase
+        else:  # during left stance phase
             if mu >= K_mu1-math.pi:
                 nu_L1 = -math.pi+math.pi * \
                     (mu-K_mu1+math.pi)/(2*math.pi+K_mu0-K_mu1)
@@ -68,17 +75,17 @@ class WalkFunc:
             eta_L = math.sin(0.5*nu_L1)*(K6+K7*max(abs(A)))
         return eta_R, eta_L
 
-    def hip_ankle(self, phase, K_mu0, K_mu1):  # hip swing + ankle pronation/supination
+    def hip_ankle(self, phase, K_mu0, K_mu1):  # hip swing + our ankle pronation/supination modification
         mu = phase
         # stance hip position (from home) just before opposite leg swings
         prestance = 0.1
         stmax = -0.05     # max stance hip displacement during opposite leg swing
         preswing = 0.1    # swing hip position (from home) just before swing
-        swmax = 0		# max swing hip displacement during swing
+        swmax = 0	   # max swing hip displacement during swing
         prepro = -0.2     # stance ankle angle just before pronation sequence
-        presup = 0.1  # swing ankle angle just before supination sequence
-        pron = 0		# max angle change during pronation of non-swing foot
-        sup = 0		# max angle change during swing phase supination
+        presup = 0.1      # swing ankle angle just before supination sequence
+        pron = 0	   # max angle change during pronation of non-swing foot
+        sup = 0	   # max angle change during swing phase supination
         if ((mu >= K_mu0-math.pi) and (mu < K_mu1-math.pi)):  # left swing phase
             hip_R = prestance+stmax * \
                 math.sin(math.pi*(mu-K_mu0+math.pi)/(K_mu1-K_mu0))
@@ -120,8 +127,8 @@ class WalkFunc:
                             (mu-K_mu1)/(K_mu0-K_mu1+math.pi)
                         ank_L = prepro+(presup-prepro) * \
                             (mu-K_mu1)/(K_mu0-K_mu1+math.pi)
-                    # double support leading to left swing, part 2 (mu < K_mu0 - pi)
-                    else:
+                    
+                    else: # double support leading to left swing, part 2 (mu < K_mu0 - pi)
                         hip_R = -preswing + \
                             (preswing+prestance)*math.sin(0.5*math.pi *
                                                           (mu+2*math.pi-K_mu1)/(K_mu0-K_mu1+math.pi))
@@ -137,10 +144,10 @@ class WalkFunc:
     def leg_swing(self, A, phase, K_mu0, K_mu1):
         mu = phase
         K10 = 0.12  # lateral swing amplitude
-        K11 = 0.1		# lateral swing amplitude offset
+        K11 = 0.1   # lateral swing amplitude offset
         K12 = 0.01  # turning lateral swing amplitude offset
-        K13 = 0.750  # sagittal swing amplitude
-        K14 = 0.4		# rotational swing amplitude
+        K13 = 0.750 # sagittal swing amplitude
+        K14 = 0.4   # rotational swing amplitude
         K15 = 0.05  # rotational swing amplitude offset
         if mu < K_mu0:
             zeta_R = ((2*(mu+2*math.pi-K_mu1))/(2*math.pi-K_mu1+K_mu0))-1
@@ -168,10 +175,11 @@ class WalkFunc:
 
     def update_walk(self, vel, dt, phase):
 
-        Sx = -vel[0]    	# step size (forward)
+        Sx = -vel[0] # step size (forward)
         Sy = vel[1]  # lateral step length
         Sz = vel[2]  # turning step magnitude
-        # setting Sy,Sz to zero limits stepping to forward/backward only
+        
+        # NOTE: setting Sy,Sz to zero limits stepping to forward/backward only
         S = [Sx, Sy, Sz]
         K20 = 3.5
         K21 = 0.2
@@ -214,9 +222,9 @@ class WalkFunc:
 
     def get(self, A, phase):
         """ Obtain the joint angles """
-        K_mu0 = 0.6  # swing start time
-        K_mu1 = 3   # swing stop time
-        K_mu2 = 2   # swing mid-time
+        K_mu0 = 0.6  # swing start phase point
+        K_mu1 = 3    # swing stop phase point
+        K_mu2 = 2    # swing mid-phase point
         a1, a2 = self.eta_leg_lift(A, phase, K_mu0, K_mu1, K_mu2)
         b1, b2, c1, c2 = self.hip_ankle(phase, K_mu0, K_mu1)
         d1, d2 = self.leg_swing(A, phase, K_mu0, K_mu1)
@@ -267,24 +275,26 @@ class WalkFunc:
         angles["r_ankle_sagittal"] = phi_Rfoot[1]-Rlegpitch-zeta_R
         angles["r_ankle_frontal"] = phi_Rfoot[0]-Rlegroll
 
-        # set arm joint angles
+        # set arm joint angles:
         sag = -math.pi/8  # max sagittal shoulder joint displacement
         elb = math.pi/6  # max elbow joint displacement
         mu = phase-0.6  # offset arm motion phase by pi to alternate arm swinging appropriately
 
-        angles["l_shoulder_frontal"] = -math.pi/9
-        angles["r_shoulder_frontal"] = -math.pi/9
+        angles["l_shoulder_frontal"] = -math.pi/9 # set L frontal shoulder angle
+        angles["r_shoulder_frontal"] = -math.pi/9 # set R frontal shoulder angle
+        
         if sum(abs(A)) > 0:  # if desired walk speed is greater than zero, then move arms
             angles["l_shoulder_sagittal"] = sag*math.sin(mu)
             angles["l_elbow"] = elb*math.cos(mu+math.pi)-elb
             angles["r_shoulder_sagittal"] = sag*math.sin(mu)
             angles["r_elbow"] = elb*math.cos(mu+math.pi)+elb
-        else:  # otherwise, set arms to these angles, when no walking is desired
+        else:  # otherwise, set arms to these static angles, when no walking is desired
             angles["l_shoulder_sagittal"] = 0.3927
             angles["l_elbow"] = -0.5236
             angles["r_shoulder_sagittal"] = 0.3927
             angles["r_elbow"] = 0.5236
         
+        # assign joint angles as defined above:
         f1 = angles["r_shoulder_sagittal"]
         f2 = angles["l_shoulder_sagittal"]
         f3 = angles["r_shoulder_frontal"]
@@ -304,6 +314,7 @@ class WalkFunc:
         f17 = angles["r_ankle_frontal"]
         f18 = angles["l_ankle_frontal"]
         
+        # output array of joint angles:
         f = np.array([f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14,f15,f16,f17,f18]) 
         
         return f
@@ -315,6 +326,8 @@ class WalkFunc:
         # set leg joint angles
         angles = {}
 
+        # initial angles in "TOBE" joint angle array format (left frontal ankle is angle 1, 
+        # left sagittal ankle is angle 2, left knee is angle 3, etc.)
         f = [-0.2, -1.1932, -1.7264, 0.4132, -0.15, 0, 0, 0.15, -0.4132, 1.7264,
              1.1932, 0.2, -0.3927, -0.3491, -0.5236, 0.3927, -0.3491, 0.5236]
 
@@ -337,6 +350,8 @@ class WalkFunc:
         angles["r_shoulder_frontal"] = f[16]
         angles["r_elbow"] = f[17]
         
+        # convert from "TOBE" format to Robotis BIOLOID format (right sag. shoulder is angle 1, left
+        # sag. shoulder is angle 2, right frontal shoulder is angle 3, etc.)
         g = np.array([f[15],f[12],f[16],f[13],f[17],f[14],f[6],f[5],f[7],f[4],f[8],f[3],f[9],f[2],f[10],f[1],f[11],f[0]])
         
         return g
@@ -350,25 +365,28 @@ class Walker:
     def __init__(self, tobe):
         self.tobe=tobe
         self.running = False
-
-        self.velocity = [0, 0, 0]
         self.walking = False
         self.func = WalkFunc()
+
+        self.velocity = [0, 0, 0]
         self.Tinit = 2
         self.dt = 0.02 # 
         self.T = self.Tinit
         self.phase = -math.pi
+        
         self.A = self.func.update_walk(self.velocity, self.dt, self.phase)
-        self.ready_pos = self.func.generate() #self.func.get(self.A, self.phase)
+        self.ready_pos = self.func.generate() 
         self.angles = self.ready_pos
 
         self._th_walk = None
-
+        
+        # subscribe to cmd_vel topic 
+        # NOTE: to initiate walking for robot, user must open a new terminal and set cmd_vel to non-zero value
         self._sub_cmd_vel = rospy.Subscriber(tobe.ns+"cmd_vel", Vector3, self._cb_cmd_vel, queue_size=1)
 
     def _cb_cmd_vel(self, msg):
         """
-        Catches cmd_vel and update walker speed
+        Catches cmd_vel and updates walker speed
         """
         print("cmdvel", msg)
         vx = msg.x
@@ -420,7 +438,7 @@ class Walker:
 
         # Global walk loop
         n = 50
-        self.current_velocity = [0, 0, 0]
+        self.current_velocity = [0, 0, 0] # robot begins at zero velocity
         while not rospy.is_shutdown() and (self.walking or self.is_walking()):
             if not self.walking:
                 self.velocity = [0, 0, 0]
@@ -428,11 +446,13 @@ class Walker:
                 self.update_velocity(self.velocity, n)
                 r.sleep()
                 continue
-            # update time to foot touchdown T:
-            self.T = self.T-dt  # decrement time until swing foot touchdown by 'dt'
+                
+            # update time remaining to foot touchdown T:
+            self.T = self.T-dt  # decrement time (until swing foot touchdown) by 'dt'
+            
             # if this value reaches zero (the foot should be touching surface)
             if self.T <= 0:
-                self.T = self.Tinit
+                self.T = self.Tinit # reset to initial value
 
             # compute step frequency 'omega' based on 'prevphase' and 'T'
             if self.phase > 0:
@@ -452,9 +472,13 @@ class Walker:
             if self.phase >= math.pi:
                 self.phase = -math.pi
 
+            # smoothly update current/desired velocity until it equals target velocity:
             self.update_velocity(self.velocity, n)
-            self.A = func.update_walk(self.velocity, dt, self.phase)
             
+            # update swing amplitude based on current velocity, dt, phase
+            self.A = func.update_walk(self.current_velocity, dt, self.phase)
+            
+            # compute and set joint angles, based on swing amplitude, phase
             self.angles = func.get(self.A, self.phase)
             self.set_angles(self.angles)
             
@@ -464,6 +488,7 @@ class Walker:
         self._th_walk = None
 
     def is_walking(self):
+        # determine whether robot is walking based on current/desired velocity
         e = 0.02
         for v in self.current_velocity:
             if abs(v) > e:
@@ -481,18 +506,21 @@ class Walker:
         return z
 
     def update_velocity(self, target, n):
+        # smoothly updates current velocity until it is equal to target velocity
         a = 3/float(n)
         b = 1-a
         self.current_velocity = [
             a*t+b*v for (t, v) in zip(target, self.current_velocity)]
 
     def get_dist_to_ready(self):
+        # get difference between home position, current joint angles
         ids = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18] # Dynamixel motor ID #'s
         poses = self.tobe.read_all_motor_positions()
         angles = self.tobe.convert_motor_positions_to_angles(ids, poses)
         return get_distance(self.ready_pos, angles)
         
     def set_angles_slow(self,stop_angles,delay=2):
+        # slowly set new joint angles, to avoid rapid, destablizing motions
         start_angles=self.angles
         start=time.time()
         stop=start+delay
@@ -506,14 +534,16 @@ class Walker:
             r.sleep()
             
     def set_angles(self, angles):
+        # immediately set new joint angles, with potential for rapid motion
         ids = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18] # Dynamixel motor ID #'s
         cmds = self.tobe.convert_angles_to_commands(ids, angles)            
         self.tobe.command_all_motors(cmds)
 
 
 def interpolate(anglesa, anglesb, coefa):
+    # interpolation function
     z = {}
-    joints = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17] #anglesa.keys()
+    joints = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17]
     for j in joints:
         z[j] = anglesa[j]*coefa+anglesb[j]*(1-coefa)
     return z
@@ -521,8 +551,9 @@ def interpolate(anglesa, anglesb, coefa):
 
 
 def get_distance(anglesa, anglesb):
+    # function that finds the average difference between inputs 'anglesa' and 'anglesb'
     d = 0
-    joints = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17] #anglesa.keys()
+    joints = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17]
     if len(joints) == 0:
         return 0
     for j in joints:

@@ -14,14 +14,15 @@ class Tobe:
     def __init__(self,ns="/realtobe/"):
         self.ns=ns
         # array of TOBE joint names in Robotis order
-        self.joints=["r_shoulder_sagittal","l_shoulder_sagittal","r_shoulder_frontal","l_shoulder_frontal","r_elbow","l_elbow",
+        # NOTE: "Robotis order" means joint 1 is right sagittal shoulder, joint 2 is left sag. shoulder, etc.
+         self.joints=["r_shoulder_sagittal","l_shoulder_sagittal","r_shoulder_frontal","l_shoulder_frontal","r_elbow","l_elbow",
         "r_hip_swivel","l_hip_swivel","r_hip_frontal","l_hip_frontal","r_hip_sagittal","l_hip_sagittal","r_knee","l_knee",
         "r_ankle_sagittal","l_ankle_sagittal","r_ankle_frontal","l_ankle_frontal"]
         
-        # initialize tobe      
+        # initialize USB2Dynamixel connection to TOBE robot      
         tobe = dxl.DynamixelIO('/dev/ttyUSB0',1000000) # port being used, e.g., "/dev/ttyUSB0" and baud rate (e.g., 1000000)
         
-        # set up motor connections
+        # set up connections to motors 1-18:
         self.motor01 = tobe.new_ax12(1)        # motor01: r_shoulder_sagittal
         self.motor02 = tobe.new_ax12(2)        # motor02: l_shoulder_sagittal
         self.motor03 = tobe.new_ax12(3)        # motor03: r_shoulder_frontal
@@ -42,10 +43,11 @@ class Tobe:
         self.motor18 = tobe.new_ax12(18)       # motor18: l_ankle_frontal     
         rospy.loginfo("Motor connections established.")
         
-        # turn on motors:
+        # turn on (i.e., enable torque for) motors:
         self.turn_on_motors()
         
-        # create joint command publishers
+        # create joint publishers:
+        # NOTE: functions for updating joint commands, angles, and velocities using these publishers are below (e.g., publish_all_motor_commands, publish_leg_angs, publish_leg_ang_vels)
         rospy.loginfo("+Creating joint publishers...")
         self._pub_joints={}
         self._pub_joint_cmds={}
@@ -60,6 +62,7 @@ class Tobe:
             rospy.loginfo(" -Found: "+j)
             
     def turn_on_motors(self):
+        # this function enables torque in all 18 joint motors
         self.motor01.torque_enable()
         self.motor02.torque_enable()
         self.motor03.torque_enable()
@@ -101,7 +104,7 @@ class Tobe:
         self.motor18.set_position(int(cmds[17]))
             
     def publish_all_motor_commands(self,angs):
-        # this function publishes commanded joint angles to all 18 publisher topics
+        # this function updates commanded joint angles for all 18 joint publisher topics
         self._pub_joints["r_shoulder_sagittal"].publish(angs[0])
         self._pub_joints["l_shoulder_sagittal"].publish(angs[1])
         self._pub_joints["r_shoulder_frontal"].publish(angs[2])
@@ -123,7 +126,7 @@ class Tobe:
 
     def command_arm_motors(self,cmds):
         # this function sends commands to the arm motors (1-6)
-        # 'cmds' is just a 6-element array of the 10-bit values to the joints in that order
+        # input 'cmds' is a 6-element array of the 10-bit values to the joints in that order
         self.motor01.set_position(int(cmds[0]))
         self.motor02.set_position(int(cmds[1]))
         self.motor03.set_position(int(cmds[2]))
@@ -133,7 +136,7 @@ class Tobe:
     
     def command_leg_motors(self,cmds):
         # this function sends commands to the leg motors (hips (9,10,11,12), knees (13,14) and ankles (15,16,17,18))
-        # 'cmds' is just a 10-element array of the 10-bit values to the joints in that order
+        # input 'cmds' is a 10-element array of the 10-bit values to the joints in that order
         self.motor09.set_position(int(cmds[0]))
         self.motor10.set_position(int(cmds[1]))
         self.motor11.set_position(int(cmds[2]))
@@ -147,7 +150,7 @@ class Tobe:
         
     def command_sag_motors(self,cmds):
         # this function sends commands to the motors for sagittal shoulders (ID:1,2), hips (11,12), knees (13,14) and ankles (15,16)
-        # 'cmds' is just a 8-element array of the 10-bit values to the joints in that order
+        # input 'cmds' is an 8-element array of the 10-bit values to the joints in that order
         self.motor01.set_position(int(cmds[0]))
         self.motor02.set_position(int(cmds[1]))
         self.motor11.set_position(int(cmds[2]))
@@ -158,7 +161,7 @@ class Tobe:
         self.motor16.set_position(int(cmds[7]))
     
     def read_all_motor_positions(self):
-        # this function reads the motor positions for all joints
+        # this function reads the motor positions for all 18 joints and returns an array with their values
         p01=self.motor01.get_position()
         p02=self.motor02.get_position()
         p03=self.motor03.get_position()
@@ -181,7 +184,7 @@ class Tobe:
         return p
     
     def read_leg_motor_positions(self):
-        # this function reads the motor positions for the leg joints
+        # this function reads the motor positions for the leg joints and returns an array with their values
         p1=self.motor09.get_position()
         p2=self.motor10.get_position()
         p3=self.motor11.get_position()
@@ -196,7 +199,7 @@ class Tobe:
         return p
     
     def read_sag_motor_positions(self):
-        # this function reads the motor positions for the sagittal joints
+        # this function reads the motor positions for the sagittal joints and returns an array with their values
         p1=self.motor01.get_position()
         p2=self.motor02.get_position()
         p3=self.motor11.get_position()
@@ -209,7 +212,7 @@ class Tobe:
         return p
     
     def read_arm_motor_positions(self):
-        # this function reads the motor positions for the arm joints
+        # this function reads the motor positions for the arm joints and returns an array with their values
         p1=self.motor01.get_position()
         p2=self.motor02.get_position()
         p3=self.motor03.get_position()
@@ -220,7 +223,7 @@ class Tobe:
         return p
         
     def read_right_arm_motor_positions(self):
-        # this function reads the motor positions for the arm joints
+        # this function reads motor positions for the right arm joints and returns an array with their values (the user can write a similar function for the left arm [2,4,6])
         p1=self.motor01.get_position() # sag. shoulder
         p2=self.motor03.get_position() # frontal shoulder
         p3=self.motor05.get_position() # elbow
@@ -228,14 +231,14 @@ class Tobe:
         return p
         
     def read_right_sag_arm_motor_positions(self):
-        # this function reads the motor positions for the arm joints
+        # this function reads the motor positions for the right sagittal shoulder and elbow and and returns an array with their values (the user can write a similar function for the left arm [2,6])
         p1=self.motor01.get_position()
         p2=self.motor05.get_position()
         p=[p1,p2]
         return p
     
     def publish_arm_cmds(self,angs):
-        # the function publishes the commanded angles to the corresponding publisher topics:
+        # the function updates the commanded angles for the corresponding publisher topics:
         self._pub_joint_cmds["r_shoulder_sagittal"].publish(angs[0])
         self._pub_joint_cmds["l_shoulder_sagittal"].publish(angs[1])
         self._pub_joint_cmds["r_shoulder_frontal"].publish(angs[2])
@@ -244,7 +247,7 @@ class Tobe:
         self._pub_joint_cmds["l_elbow"].publish(angs[5])
     
     def publish_leg_cmds(self,angs):
-        # the function publishes the commanded angles to the corresponding publisher topics:
+        # the function updates the commanded angles for the corresponding publisher topics:
         self._pub_joint_cmds["r_hip_frontal"].publish(angs[0])
         self._pub_joint_cmds["l_hip_frontal"].publish(angs[1])
         self._pub_joint_cmds["r_hip_sagittal"].publish(angs[2])
@@ -257,7 +260,7 @@ class Tobe:
         self._pub_joint_cmds["l_ankle_frontal"].publish(angs[9])
     
     def publish_sag_cmds(self,angs):
-        # the function publishes the commanded angles to the corresponding publisher topics:
+        # the function updates the commanded angles for the corresponding publisher topics:
         self._pub_joint_cmds["r_shoulder_sagittal"].publish(angs[0])
         self._pub_joint_cmds["l_shoulder_sagittal"].publish(angs[1])
         self._pub_joint_cmds["r_hip_sagittal"].publish(angs[2])
@@ -268,7 +271,7 @@ class Tobe:
         self._pub_joint_cmds["l_ankle_sagittal"].publish(angs[7])        
 
     def publish_leg_angs(self,angs):
-        # the function publishes the actual joint angles to the corresponding publisher topics:
+        # the function updates the actual joint angles for the corresponding publisher topics:
         self._pub_joints["r_hip_frontal"].publish(angs[0])
         self._pub_joints["l_hip_frontal"].publish(angs[1])
         self._pub_joints["r_hip_sagittal"].publish(angs[2])
@@ -292,7 +295,7 @@ class Tobe:
         self._pub_joints["l_ankle_sagittal"].publish(angs[7]) 
 
     def publish_leg_ang_vels(self,vels):
-        # the function publishes the joint angular velocity estimates to the corresponding publisher topics:
+        # the function updates the joint angular velocity estimates for the corresponding publisher topics:
         self._pub_joint_vels["r_hip_frontal"].publish(vels[0])
         self._pub_joint_vels["l_hip_frontal"].publish(vels[1])
         self._pub_joint_vels["r_hip_sagittal"].publish(vels[2])
@@ -305,7 +308,7 @@ class Tobe:
         self._pub_joint_vels["l_ankle_frontal"].publish(vels[9]) 
 
     def publish_sag_ang_vels(self,vels):
-        # the function publishes the joint angular velocity estimates to the corresponding publisher topics:
+        # the function updates the joint angular velocity estimates for the corresponding publisher topics:
         self._pub_joint_vels["r_shoulder_sagittal"].publish(vels[0])
         self._pub_joint_vels["l_shoulder_sagittal"].publish(vels[1])
         self._pub_joint_vels["r_hip_sagittal"].publish(vels[2])

@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/jerry/tobe_gait/catkin_ws/devel/setup.sh

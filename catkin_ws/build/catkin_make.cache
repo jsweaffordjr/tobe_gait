@@ -1,0 +1,2 @@
+tobe3_gait
+-DCATKIN_DEVEL_PREFIX=/home/jerry/tobe_gait/catkin_ws/devel -DCMAKE_INSTALL_PREFIX=/home/jerry/tobe_gait/catkin_ws/install -G Unix Makefiles
