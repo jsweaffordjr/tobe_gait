@@ -15,7 +15,7 @@ class Tobe:
         self.ns=ns
         # array of TOBE joint names in Robotis order
         # NOTE: "Robotis order" means joint 1 is right sagittal shoulder, joint 2 is left sag. shoulder, etc.
-         self.joints=["r_shoulder_sagittal","l_shoulder_sagittal","r_shoulder_frontal","l_shoulder_frontal","r_elbow","l_elbow",
+        self.joints=["r_shoulder_sagittal","l_shoulder_sagittal","r_shoulder_frontal","l_shoulder_frontal","r_elbow","l_elbow",
         "r_hip_swivel","l_hip_swivel","r_hip_frontal","l_hip_frontal","r_hip_sagittal","l_hip_sagittal","r_knee","l_knee",
         "r_ankle_sagittal","l_ankle_sagittal","r_ankle_frontal","l_ankle_frontal"]
         

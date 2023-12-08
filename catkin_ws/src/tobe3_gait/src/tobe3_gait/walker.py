@@ -369,8 +369,8 @@ class Walker:
         self.func = WalkFunc()
 
         self.velocity = [0, 0, 0]
-        self.Tinit = 2
-        self.dt = 0.02 # 
+        self.Tinit = 5 # approximate step time (1 stride = 2 steps => double this time)
+        self.dt = 0.3 # approximate loop time 
         self.T = self.Tinit
         self.phase = -math.pi
         
@@ -429,7 +429,7 @@ class Walker:
         Main walking loop, smoothly update velocity vectors and apply corresponding angles
         """
         # increment=1
-        samplerate = 50 # 
+        samplerate = 3.3333 # 
         r = rospy.Rate(samplerate)
         dt = 1.0/samplerate
         rospy.loginfo("Started walking thread")
@@ -437,7 +437,7 @@ class Walker:
         K25 = 3  # bound on step frequency omega
 
         # Global walk loop
-        n = 50
+        n = 10 #samplerate
         self.current_velocity = [0, 0, 0] # robot begins at zero velocity
         while not rospy.is_shutdown() and (self.walking or self.is_walking()):
             if not self.walking:
@@ -481,6 +481,9 @@ class Walker:
             # compute and set joint angles, based on swing amplitude, phase
             self.angles = func.get(self.A, self.phase)
             self.set_angles(self.angles)
+            
+            # print velocity:
+            rospy.loginfo(self.current_velocity)
             
             r.sleep()
         rospy.loginfo("Finished walking thread")
