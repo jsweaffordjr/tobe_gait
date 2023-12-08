@@ -1,5 +1,7 @@
 # tobe_gait
 
+TOBE is an 18-DOF position controlled robot with eighteen Dynamixel AX-12+ motors. This repository is based on a modified version of the central pattern generator (CPG)-based gait described in chapter 6 of Missura's PhD thesis "Analytic and Learned Footstep Control for Robust Bipedal Walking". The modifications I made to the BIOLOID robot (which resulted in TOBE's different arm and leg configurations) and to the CPG gait (which resulted in gait produced by the code of this repo) are outlined in chapter 3 of my PhD thesis "Model-Free Control Methods for Gait and Push Recovery in Bipedal Humanoid Robots". 
+
 There are five files in this repository that accomplish the gait motions of TOBE:
 1. tobecontrol.yaml -- Find here: catkin_ws/src/tobe3_gait/config. This file sets up joint position controllers for the 18 joints.
 
