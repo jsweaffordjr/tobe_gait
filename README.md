@@ -31,3 +31,6 @@ The ROS node will likely not launch without ROS_IP and/or ROS_MASTER_URI properl
 Other dependencies:
 Install the Python library dynamixel-controller using pip. In a terminal, use the following command: pip install dynamixel-controller
 The tobe.py file relies on this library to connect to the motors. 
+
+Video tutorial:
+A video tutorial of how to use this code is available at https://youtu.be/y4QyoEVgmbI
