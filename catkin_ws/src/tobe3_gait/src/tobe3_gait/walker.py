@@ -6,7 +6,7 @@ import math
 import numpy as np
 import time
 from geometry_msgs.msg import Vector3
-from tobe3_real.tobe import Tobe
+from tobe3_gait.tobe import Tobe
 
 
 class WalkFunc:
